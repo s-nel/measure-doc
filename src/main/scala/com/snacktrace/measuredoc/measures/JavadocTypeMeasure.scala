@@ -1,31 +1,27 @@
-package com.snacktrace.measuredoc
+package com.snacktrace.measuredoc.measures
+
+import java._
+import java.io.PrintWriter
 
 import com.puppycrawl.tools.checkstyle.api._
-import com.puppycrawl.tools.checkstyle.checks.javadoc.{JavadocTags, JavadocTag, JavadocTagInfo}
-import com.puppycrawl.tools.checkstyle.utils.{JavadocUtils, CheckUtils, ScopeUtils, CommonUtils}
+import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTag
+import com.puppycrawl.tools.checkstyle.utils.{CheckUtils, CommonUtils, JavadocUtils, ScopeUtils}
+import com.snacktrace.measuredoc._
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashSet
 
-import java._
-
-import scala.collection.mutable
-
-class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: String = ">") extends AbstractMeasure {
+class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: String = ">") extends AbstractCheck with StatefulMeasure {
 
   var coverage = HashSet.empty[Coverage]
 
-  override def getAcceptableTokens: Array[Int] = {
+  override def getTokens: Array[Int] = {
     return Array[Int](
       TokenTypes.INTERFACE_DEF,
       TokenTypes.CLASS_DEF,
       TokenTypes.ENUM_DEF,
       TokenTypes.ANNOTATION_DEF
     )
-  }
-
-  override def getDefaultTokens: Array[Int] = {
-    return getAcceptableTokens
   }
 
   override def visitToken(ast: DetailAST): Unit = {
@@ -43,13 +39,10 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
     }
   }
 
-  override def getRequiredTokens: Array[Int] = {
-    return CommonUtils.EMPTY_INT_ARRAY
-  }
-
   private def getDocCoverage(ast: DetailAST): Coverage = {
     val contents: FileContents = getFileContents
     val lineNo: Int = ast.getLineNo
+    val className = ast.findFirstToken(TokenTypes.IDENT).getText
     val textBlock = contents.getJavadocBefore(lineNo)
     val typeParamNames = CheckUtils.getTypeParameterNames(ast)
     val total = 1 + typeParamNames.size
@@ -59,6 +52,7 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
       }
     } else {
       val tags = getJavadocTags(textBlock)
+      val text = JavadocUtils.getJavadocCommentContent()
       (for {
         typeParamName <- typeParamNames
       } yield {
@@ -67,17 +61,21 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
         case Some(s) => s
       }
     }
-    Coverage(Type, total - missingDoc.size, total, contents.getFileName, MissingCoverages(missingDoc.toSet))
+    Coverage(className, Type, total - missingDoc.size, total, MissingCoverages(missingDoc.toSet))
   }
 
   private def checkTypeParamTag (tags: util.List[JavadocTag], typeParamName: String): Option[MissingCoverage] = {
-    val found = tags.exists { tag =>
+    tags.find { tag =>
       tag.isParamTag && tag.getFirstArg.indexOf(s"${openAngleBracket}${typeParamName}${closeAngleBracket}") == 0
-    }
-    if (!found) {
-      Some(MissingCoverage(Param, Some(typeParamName)))
-    } else {
-      None
+    } match {
+      case Some(tag) =>
+        val typeParamComment = tag.getFirstArg.substring(openAngleBracket.length + typeParamName.length + closeAngleBracket.length).trim
+        if (typeParamComment.isEmpty) {
+          Some(MissingCoverage(Param, Some(typeParamName)))
+        } else {
+          None
+        }
+      case None => Some(MissingCoverage(Param, Some(typeParamName)))
     }
   }
 
@@ -86,7 +84,13 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
     return tags.getValidTags
   }
 
-  override def getMeasuredCoverage(): Coverages = {
+  override def getMeasuredCoverages(): Coverages = {
     Coverages(coverage.toSet)
   }
+
+  override def resetMeasuredCoverages(): Unit = {
+    coverage.clear()
+  }
+
+  override def getDefaultTokens: Array[Int] = ???
 }

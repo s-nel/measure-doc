@@ -1,7 +1,6 @@
 package com.snacktrace.measuredoc
 
-final case class Coverage(docType: Level, covered: Int, total: Int, fileName: String,
-  missingCoverage: MissingCoverages)
+final case class Coverage(className: String, docType: Level, covered: Int, total: Int, missingCoverage: MissingCoverages)
 
 final case class Coverages(value: Set[Coverage])
 
