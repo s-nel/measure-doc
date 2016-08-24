@@ -4,7 +4,7 @@ import java.io.File
 
 import com.puppycrawl.tools.checkstyle.{BaseCheckTestSupport, DefaultConfiguration}
 import com.snacktrace.measuredoc._
-import com.snacktrace.measuredoc.javafiles.{TypeParamPartial, TypeParamMissing}
+import com.snacktrace.measuredoc.javafiles.{TypeParamComplete, TypeParamPartial, TypeParamMissing}
 import org.scalatest.WordSpec
 
 class JavadocTypeMeasureTest extends WordSpec with BaseMeasureTestSupport {
@@ -30,7 +30,7 @@ class JavadocTypeMeasureTest extends WordSpec with BaseMeasureTestSupport {
           )
         ))
       ),
-      TD("when partially missing type parameters and text",
+      TD("partially missing type parameters and text",
         classOf[TypeParamPartial[_, _]],
         Coverages(Set(
           Coverage(
@@ -42,6 +42,18 @@ class JavadocTypeMeasureTest extends WordSpec with BaseMeasureTestSupport {
               MissingCoverage(Text),
               MissingCoverage(Param, Some("T"))
             ))
+          )
+        ))
+      ),
+      TD("complete type javadoc",
+        classOf[TypeParamComplete[_, _]],
+        Coverages(Set(
+          Coverage(
+            classOf[TypeParamComplete[_, _]].getSimpleName,
+            Type,
+            3,
+            3,
+            MissingCoverages(Set.empty)
           )
         )))
     )

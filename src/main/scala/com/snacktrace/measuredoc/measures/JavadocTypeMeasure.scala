@@ -7,11 +7,13 @@ import com.puppycrawl.tools.checkstyle.api._
 import com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTag
 import com.puppycrawl.tools.checkstyle.utils.{CheckUtils, CommonUtils, JavadocUtils, ScopeUtils}
 import com.snacktrace.measuredoc._
+import com.snacktrace.measuredoc.measures.impl.DefaultJavadocSummaryParser
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashSet
 
-class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: String = ">") extends AbstractCheck with StatefulMeasure {
+class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: String = ">",
+  javadocSummaryParser: JavadocSummaryParser = new DefaultJavadocSummaryParser()) extends AbstractCheck with StatefulMeasure {
 
   var coverage = HashSet.empty[Coverage]
 
@@ -26,6 +28,12 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
 
   override def visitToken(ast: DetailAST): Unit = {
     super.visitToken(ast)
+    if (shouldCover(ast)) {
+      coverage += getDocCoverage(ast)
+    }
+  }
+
+  private def shouldCover(ast: DetailAST): Boolean = {
     val mods: DetailAST = ast.findFirstToken(TokenTypes.MODIFIERS)
     val declaredScope: Scope = ScopeUtils.getScopeFromMods(mods)
     val customScope = if (ScopeUtils.isInInterfaceOrAnnotationBlock(ast)) {
@@ -34,9 +42,7 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
       declaredScope
     }
     val surroundingScope: Scope = ScopeUtils.getSurroundingScope(ast)
-    if (customScope.isIn(Scope.PUBLIC) && (surroundingScope == null || surroundingScope.isIn(Scope.PUBLIC))) {
-      coverage += getDocCoverage(ast)
-    }
+    customScope.isIn(Scope.PUBLIC) && (surroundingScope == null || surroundingScope.isIn(Scope.PUBLIC))
   }
 
   private def getDocCoverage(ast: DetailAST): Coverage = {
@@ -52,12 +58,13 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
       }
     } else {
       val tags = getJavadocTags(textBlock)
-      val text = JavadocUtils.getJavadocCommentContent()
-      (for {
+      val tagMissingCoverage = for {
         typeParamName <- typeParamNames
       } yield {
         checkTypeParamTag(tags, typeParamName)
-      }).collect {
+      }
+      val summaryMissingCoverage = checkSummary(textBlock)
+      (tagMissingCoverage ++ Seq(summaryMissingCoverage)).collect {
         case Some(s) => s
       }
     }
@@ -93,4 +100,11 @@ class JavadocTypeMeasure(openAngleBracket: String = "<", closeAngleBracket: Stri
   }
 
   override def getDefaultTokens: Array[Int] = ???
+
+  private def checkSummary(textBlock: TextBlock): Option[MissingCoverage] = {
+    javadocSummaryParser.parse(textBlock) match {
+      case None => Some(MissingCoverage(Text))
+      case Some(t) => None
+    }
+  }
 }
