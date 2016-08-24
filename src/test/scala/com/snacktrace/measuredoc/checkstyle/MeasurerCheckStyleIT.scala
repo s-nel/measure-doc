@@ -4,7 +4,7 @@ import java.io.File
 
 import com.snacktrace.measuredoc.javafiles.{TypeParamPartial, TypeParamMissing}
 import com.snacktrace.measuredoc._
-import com.snacktrace.measuredoc.measures.JavadocTypeMeasure
+import com.snacktrace.measuredoc.measures.{JavadocMethodMeasure, JavadocTypeMeasure}
 import org.scalatest.{MustMatchers, WordSpec}
 
 import scala.concurrent.Await
@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class MeasurerCheckStyleIT extends WordSpec with MustMatchers with BaseMeasureTestSupport {
   trait Fixture {
-    val measurer = new MeasurerCheckStyle(Seq(new JavadocTypeMeasure()))
+    val measurer = new MeasurerCheckStyle(Seq(new JavadocTypeMeasure(), new JavadocMethodMeasure()))
 
     final case class TD(name: String, files: Seq[File], expected: Coverages)
 
@@ -41,6 +41,16 @@ class MeasurerCheckStyleIT extends WordSpec with MustMatchers with BaseMeasureTe
             MissingCoverages(Set(
               MissingCoverage(Text),
               MissingCoverage(Param, Some("T"))
+            ))
+          ),
+          Coverage(
+            "TypeParamPartial",
+            Method,
+            0,
+            2,
+            MissingCoverages(Set(
+              MissingCoverage(Text),
+              MissingCoverage(Param, Some("blah"))
             ))
           )
         ))))

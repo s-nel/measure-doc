@@ -6,4 +6,7 @@ package com.snacktrace.measuredoc.javafiles;
  * @param <T>
  */
 public class TypeParamPartial<S, T> {
+    public TypeParamPartial(int blah) {
+
+    }
 }
