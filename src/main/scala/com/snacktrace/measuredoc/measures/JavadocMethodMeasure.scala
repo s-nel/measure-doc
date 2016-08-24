@@ -59,6 +59,14 @@ class JavadocMethodMeasure(openAngleBracket: String = "<", closeAngleBracket: St
     val missingDoc = if (textBlock == null) {
       Seq(MissingCoverage(Text)) ++ typeParamNames.toIndexedSeq.map { paramName =>
         MissingCoverage(Param, Some(paramName))
+      } ++ paramNames.map { paramName =>
+        MissingCoverage(Param, Some(paramName))
+      } ++ (if (hasNonVoidReturnType(ast)) {
+        Seq(MissingCoverage(Return))
+      } else {
+        Seq.empty
+      }) ++ exceptionNames.map { exceptionName =>
+        MissingCoverage(Throws, Some(exceptionName))
       }
     } else {
       val tags = getJavadocTags(textBlock)
@@ -181,23 +189,22 @@ class JavadocMethodMeasure(openAngleBracket: String = "<", closeAngleBracket: St
     }
   }
 
-  private def collectSiblings(sibling: DetailAST): Seq[DetailAST] = {
-    if (sibling == null) {
-      Seq.empty
-    } else {
-      Seq(sibling) ++ collectSiblings(sibling.getNextSibling)
+  private def collectSiblings(sibling: Option[DetailAST]): Seq[DetailAST] = {
+    sibling match {
+      case Some(sibling) if sibling != null => Seq(sibling) ++ collectSiblings(Option(sibling.getNextSibling))
+      case _ => Seq.empty
     }
   }
 
   private def getParameterNames(ast: DetailAST): Seq[String] = {
-    collectSiblings(ast.findFirstToken(TokenTypes.PARAMETERS).getFirstChild)
+    collectSiblings(Option(ast.findFirstToken(TokenTypes.PARAMETERS)).map(_.getFirstChild))
       .filter(_.getType == TokenTypes.PARAMETER_DEF)
       .map(_.findFirstToken(TokenTypes.IDENT))
       .map(_.getText)
   }
 
   private def getExceptionNames(ast: DetailAST): Seq[String] = {
-    collectSiblings(ast.findFirstToken(TokenTypes.LITERAL_THROWS).getFirstChild)
+    collectSiblings(Option(ast.findFirstToken(TokenTypes.LITERAL_THROWS)).map(_.getFirstChild))
       .filter(_.getType == TokenTypes.IDENT)
       .map(_.getText)
   }

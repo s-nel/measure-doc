@@ -11,6 +11,32 @@ class JavadocMethodMeasureTest extends WordSpec with BaseMeasureTestSupport {
     final case class TD(name: String, cls: Class[_], expected: Coverages)
 
     val testDatas = Seq(
+      TD("missing method javadoc",
+        classOf[MethodMissing],
+        Coverages(Set(
+          Coverage(
+            "MethodMissing",
+            Method,
+            0,
+            2,
+            MissingCoverages(Set(
+              MissingCoverage(Text),
+              MissingCoverage(Param, Some("param"))
+            ))
+          ),
+          Coverage(
+            "foo",
+            Method,
+            0,
+            3,
+            MissingCoverages(Set(
+              MissingCoverage(Return),
+              MissingCoverage(Throws, Some("Exception")),
+              MissingCoverage(Text)
+            ))
+          )
+        ))
+      ),
       TD("complete method javadoc",
         classOf[MethodComplete],
         Coverages(Set(
